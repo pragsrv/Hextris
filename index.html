@@ -3,30 +3,49 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simple Hextris</title>
+    <title>Hextris - Medium</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Exo:wght@300;400;600&display=swap');
+        
         body {
             margin: 0;
             padding: 0;
-            background: #2c3e50;
+            background: linear-gradient(135deg, #2c3e50, #34495e);
             display: flex;
             justify-content: center;
             align-items: center;
             height: 100vh;
-            font-family: Arial, sans-serif;
+            font-family: 'Exo', Arial, sans-serif;
             color: white;
+            overflow: hidden;
         }
         
         canvas {
-            border: 2px solid #fff;
-            background: #34495e;
+            border: 3px solid #ecf0f1;
+            border-radius: 10px;
+            background: #2c3e50;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
         }
         
-        .ui {
+        .game-ui {
             position: absolute;
             top: 20px;
-            left: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
             z-index: 10;
+        }
+        
+        .score {
+            font-size: 2.5em;
+            font-weight: 600;
+            margin-bottom: 5px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        
+        .level {
+            font-size: 1.2em;
+            opacity: 0.8;
         }
         
         .controls {
@@ -35,20 +54,150 @@
             left: 50%;
             transform: translateX(-50%);
             text-align: center;
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(44, 62, 80, 0.95);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .game-title {
+            font-size: 4em;
+            font-weight: 600;
+            margin-bottom: 30px;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.7);
+            background: linear-gradient(45deg, #e74c3c, #f39c12, #f1c40f);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .start-btn {
+            padding: 15px 40px;
+            font-size: 1.5em;
+            font-weight: 600;
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(231, 76, 60, 0.4);
+            margin-bottom: 30px;
+        }
+        
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(231, 76, 60, 0.6);
+        }
+        
+        .instructions {
+            max-width: 500px;
+            line-height: 1.6;
+            text-align: center;
+            opacity: 0.9;
+        }
+        
+        .game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(44, 62, 80, 0.95);
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+        }
+        
+        .game-over h2 {
+            font-size: 3em;
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        
+        .final-score {
+            font-size: 2em;
+            margin-bottom: 30px;
+        }
+        
+        .pause-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.7);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+            font-size: 3em;
+            font-weight: 600;
+        }
+
+        @media (max-width: 600px) {
+            .game-title {
+                font-size: 2.5em;
+            }
+            .start-btn {
+                font-size: 1.2em;
+                padding: 12px 30px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="ui">
-        <div>Score: <span id="score">0</span></div>
-        <div>Press SPACE to start</div>
-        <div>A/D or ←/→ to rotate</div>
+    <canvas id="canvas" width="500" height="500"></canvas>
+    
+    <!-- Game UI -->
+    <div class="game-ui" id="gameUI" style="display: none;">
+        <div class="score" id="score">0</div>
+        <div class="level">Level <span id="level">1</span></div>
     </div>
     
-    <canvas id="canvas" width="400" height="400"></canvas>
-    
     <div class="controls">
-        <div>Match 3+ same colors to score!</div>
+        <div>🡸 A/D or ←/→ to rotate • ↓/S for speed • SPACE to pause 🡺</div>
+    </div>
+
+    <!-- Start Screen -->
+    <div class="start-screen" id="startScreen">
+        <div class="game-title">HEXTRIS</div>
+        <button class="start-btn" id="startBtn">START GAME</button>
+        <div class="instructions">
+            <p><strong>How to Play:</strong></p>
+            <p>• Rotate the hexagon to catch falling blocks</p>
+            <p>• Match 3+ blocks of the same color in a row</p>
+            <p>• Don't let blocks reach the outer edge</p>
+            <p>• Speed increases as you level up!</p>
+        </div>
+    </div>
+
+    <!-- Pause Overlay -->
+    <div class="pause-overlay" id="pauseOverlay">
+        PAUSED<br>
+        <div style="font-size: 0.5em; margin-top: 20px;">Press SPACE to continue</div>
+    </div>
+
+    <!-- Game Over Screen -->
+    <div class="game-over" id="gameOverScreen">
+        <h2>Game Over!</h2>
+        <div class="final-score">Final Score: <span id="finalScore">0</span></div>
+        <div style="margin-bottom: 30px;">Level Reached: <span id="finalLevel">1</span></div>
+        <button class="start-btn" id="restartBtn">Play Again</button>
     </div>
 
     <script>
@@ -56,37 +205,127 @@
         const ctx = canvas.getContext('2d');
         
         // Game state
-        let gameStarted = false;
+        let gameState = 'start'; // 'start', 'playing', 'paused', 'gameOver'
         let score = 0;
-        let blocks = [];
-        let hexPosition = 0; // rotation position (0-5)
-        let fallingBlock = null;
+        let level = 1;
+        let linesCleared = 0;
+        let gameSpeed = 1;
         
-        // Game settings
+        // Game objects
+        let hexPosition = 0; // rotation position (0-5)
+        let fallingBlocks = [];
+        let hexLanes = [[], [], [], [], [], []]; // 6 lanes for blocks
+        let nextBlockTime = 0;
+        let blockSpawnRate = 2000; // milliseconds
+        
+        // Visual settings
         const centerX = canvas.width / 2;
         const centerY = canvas.height / 2;
-        const hexRadius = 60;
-        const colors = ['#e74c3c', '#f1c40f', '#3498db', '#2ecc71'];
+        const hexRadius = 80;
+        const colors = ['#e74c3c', '#f1c40f', '#3498db', '#2ecc71', '#9b59b6', '#e67e22'];
         
-        // Hexagon lanes (6 sides)
-        const lanes = [[], [], [], [], [], []];
+        // Animation
+        let lastTime = 0;
+        let particles = [];
         
-        // Create a falling block
-        function createBlock() {
-            const lane = Math.floor(Math.random() * 6);
-            const color = colors[Math.floor(Math.random() * colors.length)];
-            fallingBlock = {
-                lane: lane,
-                color: color,
-                distance: 200, // distance from center
-                speed: 1
-            };
+        // Block class
+        class Block {
+            constructor(lane, color, distance = 300) {
+                this.lane = lane;
+                this.color = color;
+                this.distance = distance;
+                this.speed = 0.8 * gameSpeed;
+                this.size = 12;
+                this.settled = false;
+                this.toDelete = false;
+                this.opacity = 1;
+            }
+            
+            update(deltaTime) {
+                if (!this.settled) {
+                    this.distance -= this.speed * deltaTime * 0.1;
+                }
+                
+                if (this.toDelete) {
+                    this.opacity -= 0.05;
+                    if (this.opacity <= 0) {
+                        return false; // Mark for removal
+                    }
+                }
+                return true;
+            }
+            
+            draw() {
+                const adjustedLane = (this.lane + hexPosition) % 6;
+                const angle = (adjustedLane * 60 - 90) * Math.PI / 180;
+                const x = centerX + Math.cos(angle) * this.distance;
+                const y = centerY + Math.sin(angle) * this.distance;
+                
+                ctx.save();
+                ctx.globalAlpha = this.opacity;
+                
+                // Block shadow
+                ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                ctx.beginPath();
+                ctx.arc(x + 2, y + 2, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Main block
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(x, y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Highlight
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.beginPath();
+                ctx.arc(x - 3, y - 3, this.size * 0.4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.restore();
+            }
         }
         
-        // Draw hexagon outline
+        // Particle class for effects
+        class Particle {
+            constructor(x, y, color) {
+                this.x = x;
+                this.y = y;
+                this.vx = (Math.random() - 0.5) * 4;
+                this.vy = (Math.random() - 0.5) * 4;
+                this.color = color;
+                this.life = 1;
+                this.decay = 0.02;
+                this.size = Math.random() * 4 + 2;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.life -= this.decay;
+                this.size *= 0.98;
+                return this.life > 0;
+            }
+            
+            draw() {
+                ctx.save();
+                ctx.globalAlpha = this.life;
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
+        
+        // Draw hexagon
         function drawHexagon() {
-            ctx.strokeStyle = '#bdc3c7';
-            ctx.lineWidth = 3;
+            // Outer glow
+            ctx.save();
+            ctx.shadowColor = '#ecf0f1';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#ecf0f1';
+            ctx.lineWidth = 4;
             ctx.beginPath();
             
             for (let i = 0; i < 6; i++) {
@@ -99,144 +338,354 @@
             }
             ctx.closePath();
             ctx.stroke();
+            ctx.restore();
+            
+            // Inner lines (optional decorative effect)
+            ctx.strokeStyle = 'rgba(236, 240, 241, 0.3)';
+            ctx.lineWidth = 1;
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * 60 - 90) * Math.PI / 180;
+                const x1 = centerX + Math.cos(angle) * hexRadius;
+                const y1 = centerY + Math.sin(angle) * hexRadius;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(x1, y1);
+                ctx.stroke();
+            }
         }
         
-        // Draw a block
-        function drawBlock(lane, distance, color) {
-            // Calculate position based on lane and distance
-            const adjustedLane = (lane + hexPosition) % 6;
-            const angle = (adjustedLane * 60 - 90) * Math.PI / 180;
-            const x = centerX + Math.cos(angle) * distance;
-            const y = centerY + Math.sin(angle) * distance;
+        // Create new falling block
+        function createFallingBlock() {
+            const lane = Math.floor(Math.random() * 6);
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            fallingBlocks.push(new Block(lane, color));
+        }
+        
+        // Check collisions
+        function checkCollisions() {
+            for (let i = fallingBlocks.length - 1; i >= 0; i--) {
+                const block = fallingBlocks[i];
+                const targetLane = (block.lane + hexPosition) % 6;
+                const laneBlocks = hexLanes[targetLane];
+                
+                // Calculate stop distance
+                let stopDistance = hexRadius + 15;
+                if (laneBlocks.length > 0) {
+                    stopDistance = hexRadius + 15 + (laneBlocks.length * 25);
+                }
+                
+                if (block.distance <= stopDistance) {
+                    // Add to lane
+                    block.distance = stopDistance;
+                    block.settled = true;
+                    hexLanes[targetLane].push(block);
+                    fallingBlocks.splice(i, 1);
+                    
+                    // Check for matches
+                    checkMatches(targetLane);
+                    
+                    // Check game over
+                    if (stopDistance > 250) {
+                        gameOver();
+                        return;
+                    }
+                }
+            }
+        }
+        
+        // Check for matching blocks
+        function checkMatches(lane) {
+            const blocks = hexLanes[lane];
+            if (blocks.length < 3) return;
             
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(x, y, 8, 0, Math.PI * 2);
-            ctx.fill();
+            let matchStart = -1;
+            let matchLength = 1;
+            let currentColor = null;
+            
+            for (let i = 0; i < blocks.length; i++) {
+                if (blocks[i].color === currentColor && !blocks[i].toDelete) {
+                    matchLength++;
+                } else {
+                    if (matchLength >= 3) {
+                        // Mark blocks for deletion
+                        for (let j = matchStart; j < matchStart + matchLength; j++) {
+                            if (j >= 0 && j < blocks.length) {
+                                blocks[j].toDelete = true;
+                                // Create particles
+                                const angle = (lane * 60 - 90) * Math.PI / 180;
+                                const x = centerX + Math.cos(angle) * blocks[j].distance;
+                                const y = centerY + Math.sin(angle) * blocks[j].distance;
+                                for (let k = 0; k < 8; k++) {
+                                    particles.push(new Particle(x, y, blocks[j].color));
+                                }
+                            }
+                        }
+                        
+                        // Update score
+                        score += matchLength * 10 * level;
+                        linesCleared += matchLength;
+                        
+                        // Level up every 50 blocks cleared
+                        if (Math.floor(linesCleared / 50) + 1 > level) {
+                            level++;
+                            gameSpeed += 0.2;
+                            blockSpawnRate = Math.max(800, blockSpawnRate - 100);
+                            updateUI();
+                        }
+                    }
+                    
+                    currentColor = blocks[i].color;
+                    matchStart = i;
+                    matchLength = 1;
+                }
+            }
+            
+            // Check final sequence
+            if (matchLength >= 3) {
+                for (let j = matchStart; j < matchStart + matchLength; j++) {
+                    if (j >= 0 && j < blocks.length) {
+                        blocks[j].toDelete = true;
+                        const angle = (lane * 60 - 90) * Math.PI / 180;
+                        const x = centerX + Math.cos(angle) * blocks[j].distance;
+                        const y = centerY + Math.sin(angle) * blocks[j].distance;
+                        for (let k = 0; k < 8; k++) {
+                            particles.push(new Particle(x, y, blocks[j].color));
+                        }
+                    }
+                }
+                score += matchLength * 10 * level;
+                linesCleared += matchLength;
+                
+                if (Math.floor(linesCleared / 50) + 1 > level) {
+                    level++;
+                    gameSpeed += 0.2;
+                    blockSpawnRate = Math.max(800, blockSpawnRate - 100);
+                    updateUI();
+                }
+            }
+            
+            updateUI();
+        }
+        
+        // Remove deleted blocks and compact
+        function cleanupBlocks() {
+            for (let lane = 0; lane < 6; lane++) {
+                for (let i = hexLanes[lane].length - 1; i >= 0; i--) {
+                    if (!hexLanes[lane][i].update()) {
+                        hexLanes[lane].splice(i, 1);
+                        // Reposition remaining blocks
+                        for (let j = i; j < hexLanes[lane].length; j++) {
+                            hexLanes[lane][j].distance = hexRadius + 15 + (j * 25);
+                        }
+                    }
+                }
+            }
         }
         
         // Rotate hexagon
         function rotate(direction) {
-            if (!gameStarted) return;
+            if (gameState !== 'playing') return;
             hexPosition = (hexPosition + direction + 6) % 6;
         }
         
-        // Check for matches
-        function checkMatches() {
-            for (let lane = 0; lane < 6; lane++) {
-                if (lanes[lane].length < 3) continue;
-                
-                // Check for 3+ consecutive same colors
-                let matchCount = 1;
-                let matchStart = 0;
-                
-                for (let i = 1; i < lanes[lane].length; i++) {
-                    if (lanes[lane][i].color === lanes[lane][i-1].color) {
-                        matchCount++;
-                    } else {
-                        if (matchCount >= 3) {
-                            // Remove matched blocks
-                            lanes[lane].splice(matchStart, matchCount);
-                            score += matchCount * 10;
-                            document.getElementById('score').textContent = score;
-                            return true; // Found a match
-                        }
-                        matchCount = 1;
-                        matchStart = i;
-                    }
-                }
-                
-                // Check final sequence
-                if (matchCount >= 3) {
-                    lanes[lane].splice(matchStart, matchCount);
-                    score += matchCount * 10;
-                    document.getElementById('score').textContent = score;
-                    return true;
-                }
+        // Update UI
+        function updateUI() {
+            document.getElementById('score').textContent = score;
+            document.getElementById('level').textContent = level;
+        }
+        
+        // Game states
+        function startGame() {
+            gameState = 'playing';
+            score = 0;
+            level = 1;
+            linesCleared = 0;
+            gameSpeed = 1;
+            blockSpawnRate = 2000;
+            hexPosition = 0;
+            fallingBlocks = [];
+            hexLanes = [[], [], [], [], [], []];
+            particles = [];
+            nextBlockTime = 0;
+            
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('gameUI').style.display = 'block';
+            
+            updateUI();
+            gameLoop();
+        }
+        
+        function pauseGame() {
+            if (gameState === 'playing') {
+                gameState = 'paused';
+                document.getElementById('pauseOverlay').style.display = 'flex';
+            } else if (gameState === 'paused') {
+                gameState = 'playing';
+                document.getElementById('pauseOverlay').style.display = 'none';
+                lastTime = performance.now();
+                gameLoop();
             }
-            return false;
+        }
+        
+        function gameOver() {
+            gameState = 'gameOver';
+            document.getElementById('finalScore').textContent = score;
+            document.getElementById('finalLevel').textContent = level;
+            document.getElementById('gameOverScreen').style.display = 'flex';
+        }
+        
+        function restartGame() {
+            document.getElementById('gameOverScreen').style.display = 'none';
+            document.getElementById('gameUI').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'flex';
+            gameState = 'start';
         }
         
         // Game loop
-        function gameLoop() {
-            // Clear canvas
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        function gameLoop(currentTime = 0) {
+            if (gameState !== 'playing') return;
             
-            if (!gameStarted) {
-                drawHexagon();
-                requestAnimationFrame(gameLoop);
-                return;
+            const deltaTime = currentTime - lastTime;
+            lastTime = currentTime;
+            
+            // Spawn new blocks
+            nextBlockTime += deltaTime;
+            if (nextBlockTime >= blockSpawnRate) {
+                createFallingBlock();
+                nextBlockTime = 0;
             }
             
-            // Move falling block
-            if (fallingBlock) {
-                fallingBlock.distance -= fallingBlock.speed;
-                
-                // Check if block reached the center or hit another block
-                const targetLane = (fallingBlock.lane + hexPosition) % 6;
-                const stopDistance = hexRadius + (lanes[targetLane].length * 16);
-                
-                if (fallingBlock.distance <= stopDistance) {
-                    // Add block to lane
-                    lanes[targetLane].push({
-                        color: fallingBlock.color
-                    });
-                    fallingBlock = null;
-                    
-                    // Check for matches
-                    checkMatches();
-                    
-                    // Create new block after a short delay
-                    setTimeout(createBlock, 500);
+            // Update falling blocks
+            for (let i = fallingBlocks.length - 1; i >= 0; i--) {
+                fallingBlocks[i].update(deltaTime);
+            }
+            
+            // Update particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                if (!particles[i].update()) {
+                    particles.splice(i, 1);
                 }
-            } else if (Math.random() < 0.01) { // Random chance to create new block
-                createBlock();
             }
+            
+            // Check collisions
+            checkCollisions();
+            
+            // Cleanup deleted blocks
+            cleanupBlocks();
+            
+            // Render
+            render();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Render everything
+        function render() {
+            // Clear canvas with gradient
+            const gradient = ctx.createRadialGradient(centerX, centerY, 0, centerX, centerY, 300);
+            gradient.addColorStop(0, '#34495e');
+            gradient.addColorStop(1, '#2c3e50');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
             // Draw hexagon
             drawHexagon();
             
-            // Draw all blocks in lanes
+            // Draw settled blocks
             for (let lane = 0; lane < 6; lane++) {
-                for (let i = 0; i < lanes[lane].length; i++) {
-                    const distance = hexRadius + (i * 16);
+                for (let block of hexLanes[lane]) {
                     const adjustedLane = (lane - hexPosition + 6) % 6;
-                    drawBlock(adjustedLane, distance, lanes[lane][i].color);
+                    const angle = (adjustedLane * 60 - 90) * Math.PI / 180;
+                    const x = centerX + Math.cos(angle) * block.distance;
+                    const y = centerY + Math.sin(angle) * block.distance;
+                    
+                    ctx.save();
+                    ctx.globalAlpha = block.opacity;
+                    
+                    // Block shadow
+                    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+                    ctx.beginPath();
+                    ctx.arc(x + 2, y + 2, block.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Main block
+                    ctx.fillStyle = block.color;
+                    ctx.beginPath();
+                    ctx.arc(x, y, block.size, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    // Highlight
+                    ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                    ctx.beginPath();
+                    ctx.arc(x - 3, y - 3, block.size * 0.4, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.restore();
                 }
             }
             
-            // Draw falling block
-            if (fallingBlock) {
-                drawBlock(fallingBlock.lane, fallingBlock.distance, fallingBlock.color);
+            // Draw falling blocks
+            for (let block of fallingBlocks) {
+                block.draw();
             }
             
-            requestAnimationFrame(gameLoop);
+            // Draw particles
+            for (let particle of particles) {
+                particle.draw();
+            }
         }
         
         // Input handling
         document.addEventListener('keydown', (e) => {
             switch(e.key) {
                 case ' ':
-                    if (!gameStarted) {
-                        gameStarted = true;
-                        createBlock();
+                    e.preventDefault();
+                    if (gameState === 'playing' || gameState === 'paused') {
+                        pauseGame();
                     }
                     break;
                 case 'a':
                 case 'A':
                 case 'ArrowLeft':
+                    e.preventDefault();
                     rotate(-1);
                     break;
                 case 'd':
                 case 'D':
                 case 'ArrowRight':
+                    e.preventDefault();
                     rotate(1);
+                    break;
+                case 's':
+                case 'S':
+                case 'ArrowDown':
+                    e.preventDefault();
+                    // Speed up falling blocks temporarily
+                    if (gameState === 'playing') {
+                        for (let block of fallingBlocks) {
+                            block.speed = 2 * gameSpeed;
+                        }
+                    }
                     break;
             }
         });
         
-        // Start the game
-        gameLoop();
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 's' || e.key === 'S' || e.key === 'ArrowDown') {
+                // Reset falling block speed
+                for (let block of fallingBlocks) {
+                    block.speed = 0.8 * gameSpeed;
+                }
+            }
+        });
+        
+        // Button event listeners
+        document.getElementById('startBtn').addEventListener('click', startGame);
+        document.getElementById('restartBtn').addEventListener('click', restartGame);
+        
+        // Initialize
+        render();
     </script>
 </body>
 </html>
