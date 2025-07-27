@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Hextris</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background: #2c3e50;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            font-family: Arial, sans-serif;
+            color: white;
+        }
+        
+        canvas {
+            border: 2px solid #fff;
+            background: #34495e;
+        }
+        
+        .ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+        
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="ui">
+        <div>Score: <span id="score">0</span></div>
+        <div>Press SPACE to start</div>
+        <div>A/D or ←/→ to rotate</div>
+    </div>
+    
+    <canvas id="canvas" width="400" height="400"></canvas>
+    
+    <div class="controls">
+        <div>Match 3+ same colors to score!</div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Game state
+        let gameStarted = false;
+        let score = 0;
+        let blocks = [];
+        let hexPosition = 0; // rotation position (0-5)
+        let fallingBlock = null;
+        
+        // Game settings
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const hexRadius = 60;
+        const colors = ['#e74c3c', '#f1c40f', '#3498db', '#2ecc71'];
+        
+        // Hexagon lanes (6 sides)
+        const lanes = [[], [], [], [], [], []];
+        
+        // Create a falling block
+        function createBlock() {
+            const lane = Math.floor(Math.random() * 6);
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            fallingBlock = {
+                lane: lane,
+                color: color,
+                distance: 200, // distance from center
+                speed: 1
+            };
+        }
+        
+        // Draw hexagon outline
+        function drawHexagon() {
+            ctx.strokeStyle = '#bdc3c7';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            
+            for (let i = 0; i < 6; i++) {
+                const angle = (i * 60 - 90) * Math.PI / 180;
+                const x = centerX + Math.cos(angle) * hexRadius;
+                const y = centerY + Math.sin(angle) * hexRadius;
+                
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+        }
+        
+        // Draw a block
+        function drawBlock(lane, distance, color) {
+            // Calculate position based on lane and distance
+            const adjustedLane = (lane + hexPosition) % 6;
+            const angle = (adjustedLane * 60 - 90) * Math.PI / 180;
+            const x = centerX + Math.cos(angle) * distance;
+            const y = centerY + Math.sin(angle) * distance;
+            
+            ctx.fillStyle = color;
+            ctx.beginPath();
+            ctx.arc(x, y, 8, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        
+        // Rotate hexagon
+        function rotate(direction) {
+            if (!gameStarted) return;
+            hexPosition = (hexPosition + direction + 6) % 6;
+        }
+        
+        // Check for matches
+        function checkMatches() {
+            for (let lane = 0; lane < 6; lane++) {
+                if (lanes[lane].length < 3) continue;
+                
+                // Check for 3+ consecutive same colors
+                let matchCount = 1;
+                let matchStart = 0;
+                
+                for (let i = 1; i < lanes[lane].length; i++) {
+                    if (lanes[lane][i].color === lanes[lane][i-1].color) {
+                        matchCount++;
+                    } else {
+                        if (matchCount >= 3) {
+                            // Remove matched blocks
+                            lanes[lane].splice(matchStart, matchCount);
+                            score += matchCount * 10;
+                            document.getElementById('score').textContent = score;
+                            return true; // Found a match
+                        }
+                        matchCount = 1;
+                        matchStart = i;
+                    }
+                }
+                
+                // Check final sequence
+                if (matchCount >= 3) {
+                    lanes[lane].splice(matchStart, matchCount);
+                    score += matchCount * 10;
+                    document.getElementById('score').textContent = score;
+                    return true;
+                }
+            }
+            return false;
+        }
+        
+        // Game loop
+        function gameLoop() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            if (!gameStarted) {
+                drawHexagon();
+                requestAnimationFrame(gameLoop);
+                return;
+            }
+            
+            // Move falling block
+            if (fallingBlock) {
+                fallingBlock.distance -= fallingBlock.speed;
+                
+                // Check if block reached the center or hit another block
+                const targetLane = (fallingBlock.lane + hexPosition) % 6;
+                const stopDistance = hexRadius + (lanes[targetLane].length * 16);
+                
+                if (fallingBlock.distance <= stopDistance) {
+                    // Add block to lane
+                    lanes[targetLane].push({
+                        color: fallingBlock.color
+                    });
+                    fallingBlock = null;
+                    
+                    // Check for matches
+                    checkMatches();
+                    
+                    // Create new block after a short delay
+                    setTimeout(createBlock, 500);
+                }
+            } else if (Math.random() < 0.01) { // Random chance to create new block
+                createBlock();
+            }
+            
+            // Draw hexagon
+            drawHexagon();
+            
+            // Draw all blocks in lanes
+            for (let lane = 0; lane < 6; lane++) {
+                for (let i = 0; i < lanes[lane].length; i++) {
+                    const distance = hexRadius + (i * 16);
+                    const adjustedLane = (lane - hexPosition + 6) % 6;
+                    drawBlock(adjustedLane, distance, lanes[lane][i].color);
+                }
+            }
+            
+            // Draw falling block
+            if (fallingBlock) {
+                drawBlock(fallingBlock.lane, fallingBlock.distance, fallingBlock.color);
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Input handling
+        document.addEventListener('keydown', (e) => {
+            switch(e.key) {
+                case ' ':
+                    if (!gameStarted) {
+                        gameStarted = true;
+                        createBlock();
+                    }
+                    break;
+                case 'a':
+                case 'A':
+                case 'ArrowLeft':
+                    rotate(-1);
+                    break;
+                case 'd':
+                case 'D':
+                case 'ArrowRight':
+                    rotate(1);
+                    break;
+            }
+        });
+        
+        // Start the game
+        gameLoop();
+    </script>
+</body>
+</html>
