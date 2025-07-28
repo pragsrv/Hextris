@@ -299,26 +299,25 @@
 
         /* Normal Instruction Panel */
         #instructionPanel {
-    position: absolute;
-    top: 50%;
-    right: 20px;
-    transform: translateY(-50%);
-    width: 280px;
-    max-height: 400px;
-    padding: 20px;
-    background: transparent;
-    border: none;
-    border-radius: 15px;
-    color: var(--text-color);
-    font-family: 'Exo', sans-serif;
-    font-size: 0.9rem;
-    z-index: 1000;
-    box-shadow: none;
-    transition: all 0.3s ease;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-}
-
+            position: absolute;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            width: 280px;
+            max-height: 400px;
+            padding: 20px;
+            background: transparent;
+            border: none;
+            border-radius: 15px;
+            color: var(--text-color);
+            font-family: 'Exo', sans-serif;
+            font-size: 0.9rem;
+            z-index: 1000;
+            box-shadow: none;
+            transition: all 0.3s ease;
+            backdrop-filter: none;
+            -webkit-backdrop-filter: none;
+        }
 
         #instructionPanel:hover {
             transform: translateY(-50%) scale(1.02);
@@ -458,7 +457,7 @@
         <div class="game-instructions">
             <p><strong>How to Play:</strong></p>
             <p>• Rotate the hexagon to catch falling blocks</p>
-            <p>• Match 3+ blocks of the same color to score</p>
+            <p>• Match 3+ blocks of the same color in any direction</p>
             <p>• Use Arrow Keys or A/D to rotate</p>
             <p>• Press Enter or Click START to begin</p>
         </div>
@@ -490,8 +489,8 @@
             <div class="section-title">Objective</div>
             <ul>
                 <li>Match 3+ same colors</li>
+                <li>Horizontal & diagonal matches</li>
                 <li>Prevent blocks from leaving</li>
-                <li>Score increases with difficulty</li>
             </ul>
         </div>
     </div>
@@ -1122,40 +1121,79 @@
             score += 3;
         }
 
-        // Block checking and consolidation
+        // Enhanced block checking and consolidation with flood-fill algorithm
+        function findConnectedBlocks(startLane, startIndex, targetColor, visited = new Set()) {
+            const key = `${startLane}-${startIndex}`;
+            
+            // If already visited or invalid position, return empty array
+            if (visited.has(key) || 
+                startLane < 0 || startLane >= MainHex.sides ||
+                startIndex < 0 || startIndex >= MainHex.blocks[startLane].length) {
+                return [];
+            }
+            
+            const block = MainHex.blocks[startLane][startIndex];
+            
+            // If block doesn't exist, is deleted, or wrong color, return empty array
+            if (!block || block.deleted || block.color !== targetColor) {
+                return [];
+            }
+            
+            visited.add(key);
+            let connectedBlocks = [{ lane: startLane, index: startIndex, block: block }];
+            
+            // Check vertical neighbors (same lane)
+            const verticalNeighbors = [
+                { lane: startLane, index: startIndex - 1 }, // Below
+                { lane: startLane, index: startIndex + 1 }  // Above
+            ];
+            
+            // Check horizontal neighbors (adjacent lanes at same height)
+            const horizontalNeighbors = [
+                { lane: (startLane - 1 + MainHex.sides) % MainHex.sides, index: startIndex }, // Left lane
+                { lane: (startLane + 1) % MainHex.sides, index: startIndex }                    // Right lane
+            ];
+            
+            // Check diagonal neighbors (adjacent lanes at different heights)
+            const diagonalNeighbors = [
+                { lane: (startLane - 1 + MainHex.sides) % MainHex.sides, index: startIndex - 1 }, // Left-down
+                { lane: (startLane - 1 + MainHex.sides) % MainHex.sides, index: startIndex + 1 }, // Left-up
+                { lane: (startLane + 1) % MainHex.sides, index: startIndex - 1 },                  // Right-down
+                { lane: (startLane + 1) % MainHex.sides, index: startIndex + 1 }                   // Right-up
+            ];
+            
+            // Combine all neighbors
+            const allNeighbors = [...verticalNeighbors, ...horizontalNeighbors, ...diagonalNeighbors];
+            
+            // Recursively check all neighbors
+            for (const neighbor of allNeighbors) {
+                const neighborBlocks = findConnectedBlocks(neighbor.lane, neighbor.index, targetColor, visited);
+                connectedBlocks = connectedBlocks.concat(neighborBlocks);
+            }
+            
+            return connectedBlocks;
+        }
+
         function consolidateBlocks(hex, lane, index) {
             const block = hex.blocks[lane][index];
+            if (!block || block.deleted) return;
+            
             const color = block.color;
-            let count = 1;
-            let toDelete = [block];
-
-            // Check upward
-            for (let i = index + 1; i < hex.blocks[lane].length; i++) {
-                if (hex.blocks[lane][i].color === color && !hex.blocks[lane][i].deleted) {
-                    count++;
-                    toDelete.push(hex.blocks[lane][i]);
-                } else {
-                    break;
-                }
-            }
-
-            // Check downward
-            for (let i = index - 1; i >= 0; i--) {
-                if (hex.blocks[lane][i].color === color && !hex.blocks[lane][i].deleted) {
-                    count++;
-                    toDelete.unshift(hex.blocks[lane][i]);
-                } else {
-                    break;
-                }
-            }
-
-            if (count >= 3) {
-                toDelete.forEach(b => {
-                    b.deleted = 1;
+            const connectedBlocks = findConnectedBlocks(lane, index, color);
+            
+            if (connectedBlocks.length >= 3) {
+                // Mark all connected blocks for deletion
+                connectedBlocks.forEach(({ block }) => {
+                    block.deleted = 1;
                 });
+                
                 hex.lastColorScored = color;
                 hex.lastCombo = hex.ct;
-                score += count * 10;
+                
+                // Score based on number of blocks destroyed
+                const baseScore = connectedBlocks.length * 10;
+                const bonusScore = Math.max(0, (connectedBlocks.length - 3) * 5); // Bonus for larger groups
+                score += baseScore + bonusScore;
             }
         }
 
